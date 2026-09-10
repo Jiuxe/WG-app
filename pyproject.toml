@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weapo-games"
+version = "0.1.0"
+description = "Colección local de juegos de mesa digitales."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "PySide6>=6.7,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+]
+
+[tool.setuptools.packages.find]
+include = ["weapo_games*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
