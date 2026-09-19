@@ -5,9 +5,12 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStackedWidget
 
 from weapo_games.games.calculated_areas.game import CalculatedAreasGame
+from weapo_games.games.candidate_vote.game import CandidateVoteGame
 from weapo_games.services.save_manager import SaveManager
 from weapo_games.ui.calculated_areas_view import CalculatedAreasView
+from weapo_games.ui.candidate_vote_view import CandidateSetupView, CandidateVoteView
 from weapo_games.ui.load_game_view import LoadGameView
+from weapo_games.ui.hex_memory_view import HexMemorySetupView, HexMemoryView
 from weapo_games.ui.main_menu import MainMenu
 from weapo_games.ui.new_game_menu import NewGameMenu
 from weapo_games.ui.scoreboard_view import ScoreboardView
@@ -26,12 +29,18 @@ class MainWindow(QMainWindow):
 
         self.main_menu = MainMenu()
         self.new_game_menu = NewGameMenu()
+        self.candidate_setup_view = CandidateSetupView()
+        self.hex_memory_setup_view = HexMemorySetupView()
         self.load_game_view = LoadGameView(self.save_manager)
         self.game_view: CalculatedAreasView | None = None
         self.scoreboard_view: ScoreboardView | None = None
+        self.candidate_vote_view: CandidateVoteView | None = None
+        self.hex_memory_view: HexMemoryView | None = None
 
         self.stack.addWidget(self.main_menu)
         self.stack.addWidget(self.new_game_menu)
+        self.stack.addWidget(self.candidate_setup_view)
+        self.stack.addWidget(self.hex_memory_setup_view)
         self.stack.addWidget(self.load_game_view)
 
         self.main_menu.new_game_requested.connect(self.show_new_game_menu)
@@ -39,6 +48,12 @@ class MainWindow(QMainWindow):
         self.main_menu.exit_requested.connect(QApplication.instance().quit)
         self.new_game_menu.back_requested.connect(self.show_main_menu)
         self.new_game_menu.calculated_areas_requested.connect(self.start_new_game)
+        self.new_game_menu.candidate_vote_requested.connect(self.show_candidate_setup)
+        self.new_game_menu.hex_memory_requested.connect(self.show_hex_memory_setup)
+        self.candidate_setup_view.back_requested.connect(self.show_new_game_menu)
+        self.candidate_setup_view.started.connect(self.start_candidate_vote)
+        self.hex_memory_setup_view.back_requested.connect(self.show_new_game_menu)
+        self.hex_memory_setup_view.started.connect(self.start_hex_memory)
         self.load_game_view.back_requested.connect(self.show_main_menu)
         self.load_game_view.load_requested.connect(self.load_game)
 
@@ -53,6 +68,30 @@ class MainWindow(QMainWindow):
     def show_load_game_menu(self) -> None:
         self.load_game_view.refresh()
         self.stack.setCurrentWidget(self.load_game_view)
+
+    def show_candidate_setup(self) -> None:
+        self.stack.setCurrentWidget(self.candidate_setup_view)
+
+    def show_hex_memory_setup(self) -> None:
+        self.stack.setCurrentWidget(self.hex_memory_setup_view)
+
+    def start_candidate_vote(self, game: CandidateVoteGame) -> None:
+        if self.candidate_vote_view is not None:
+            self.stack.removeWidget(self.candidate_vote_view)
+            self.candidate_vote_view.deleteLater()
+        self.candidate_vote_view = CandidateVoteView(game)
+        self.candidate_vote_view.back_to_menu_requested.connect(self.show_main_menu)
+        self.stack.addWidget(self.candidate_vote_view)
+        self.stack.setCurrentWidget(self.candidate_vote_view)
+
+    def start_hex_memory(self, game) -> None:
+        if self.hex_memory_view is not None:
+            self.stack.removeWidget(self.hex_memory_view)
+            self.hex_memory_view.deleteLater()
+        self.hex_memory_view = HexMemoryView(game)
+        self.hex_memory_view.back_to_menu_requested.connect(self.show_main_menu)
+        self.stack.addWidget(self.hex_memory_view)
+        self.stack.setCurrentWidget(self.hex_memory_view)
 
     def _show_game(self, game: CalculatedAreasGame) -> None:
         if self.game_view is not None:

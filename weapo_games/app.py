@@ -82,6 +82,26 @@ QFrame#gameCard, QFrame#sidePanel, QFrame#areaCard {
     border: 1px solid #343B47;
     border-radius: 14px;
 }
+QLabel#targetNumber {
+    font-size: 64px;
+    font-weight: 900;
+    color: #F5C542;
+}
+QFrame#candidateCard {
+    background-color: #1A1F27;
+    border: 1px solid #343B47;
+    border-radius: 14px;
+    min-width: 230px;
+}
+QLabel#candidateName {
+    font-size: 20px;
+    font-weight: 800;
+}
+QLabel#candidateScore {
+    font-size: 42px;
+    font-weight: 900;
+    color: #F5C542;
+}
 QLabel#areaSymbol {
     font-size: 44px;
     color: #F5C542;
