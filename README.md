@@ -11,6 +11,7 @@ Aplicación de escritorio en Python que funciona completamente en local. Incluye
 - Conversión automática de números a letras y generación de un objetivo con al menos cuatro líneas válidas de tres números.
 - Ventana privada de soluciones para el máster.
 - Dificultad progresiva del objetivo: rondas 1-5 entre 5 y 10, rondas 6-8 entre 10 y 20 y desde la ronda 9 entre 20 y 25. Los números de las celdas siempre están entre 1 y 10.
+- Modalidad alternativa con 10 tableros ilustrados y un tablero oculto para las letras.
 - Candidatos con nombre, color y puntuación visible por barras.
 - Servidor web local y QR para emitir votos desde dispositivos de la misma red.
 - Añadir y eliminar jugadores durante la ronda 0.
@@ -89,7 +90,7 @@ nombres y colores y pulsa **Comenzar partida**. Pulsa **Mostrar QR** y escanéal
 desde dispositivos conectados a la misma red Wi-Fi que el ordenador. La ventana
 principal debe permanecer abierta mientras se reciben los votos.
 
-Para usar **Memoria hexagonal**, selecciónalo en **Nueva partida** y elige el tiempo visible. Por defecto se genera automáticamente un tablero adyacente con filas 3-4-5-4-3. Si pulsas **Introducir patrón manual**, puedes escribir las cinco filas con el formato `(1,2,3),(1,2,3,4),(1,2,3,4,5),(1,2,3,4),(1,2,3)`. Cuando termine el tiempo, los números se convertirán en letras y aparecerá el objetivo. El botón **Soluciones del máster** abre una ventana privada con todas las combinaciones válidas de ese tablero.
+Para usar **Memoria hexagonal**, selecciónalo en **Nueva partida** y elige la modalidad. En **Tablero generado / manual**, se crea un tablero adyacente con filas 3-4-5-4-3; también puedes pulsar **Introducir patrón manual** y escribir las cinco filas con el formato `(1,2,3),(1,2,3,4),(1,2,3,4,5),(1,2,3,4),(1,2,3)`. En **Tableros con imágenes**, se juegan 10 rondas ilustradas con sus soluciones asociadas. Cuando termine el tiempo, los números se convertirán en letras y aparecerá el objetivo. El botón **Soluciones del máster** abre una ventana privada con todas las combinaciones válidas de ese tablero.
 
 ## Reglas implementadas
 

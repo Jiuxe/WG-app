@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from PySide6.QtCore import QPointF, QTimer, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QPainter, QPolygonF
+from PySide6.QtGui import QColor, QFont, QPainter, QPixmap, QPolygonF
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QLabel, QMessageBox,
     QLineEdit, QPushButton, QPlainTextEdit, QSpinBox, QVBoxLayout, QWidget,
@@ -58,6 +58,55 @@ class HexCellWidget(QWidget):
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, text)
 
 
+class HexImageBoardWidget(QWidget):
+    """Muestra un tablero ilustrado y superpone sus números o letras."""
+
+    def __init__(self, game: HexMemoryGame, revealed: bool, show_numbers: bool, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.game = game
+        self.revealed = revealed
+        self.show_numbers = show_numbers
+        self.setMinimumSize(560, 560)
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        image_path = self.game.hidden_image_asset_path() if self.revealed else self.game.image_path
+        pixmap = QPixmap(str(image_path)) if image_path else QPixmap()
+        if not pixmap.isNull():
+            scaled = pixmap.scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            x = (self.width() - scaled.width()) // 2
+            y = (self.height() - scaled.height()) // 2
+            painter.drawPixmap(x, y, scaled)
+        else:
+            painter.fillRect(self.rect(), QColor("#171B22"))
+            x, y, scaled = 0, 0, self.size()
+
+        board_width = scaled.width()
+        board_height = scaled.height()
+        origin_x = x + board_width * 0.5
+        origin_y = y + board_height * 0.5
+        pitch_x = board_width * 0.162
+        pitch_y = board_height * 0.148
+        tile_width = board_width * 0.13
+        tile_height = board_height * 0.15
+        painter.setPen(QColor("#111318" if not self.revealed else "#F8FAFC"))
+        for cell in self.game.cells:
+            row_length = len(self.game.rows[cell.row])
+            center_x = origin_x + (cell.column - (row_length - 1) / 2) * pitch_x
+            center_y = origin_y + (cell.row - 2) * pitch_y
+            rect_x = center_x - tile_width / 2
+            rect_y = center_y - tile_height / 2
+            painter.setFont(QFont("Segoe UI", max(16, int(tile_height * (0.26 if self.show_numbers else 0.34))), QFont.Weight.Bold))
+            if not self.revealed:
+                text = str(cell.value)
+            elif self.show_numbers:
+                text = f"{cell.letter}\n{cell.value}"
+            else:
+                text = cell.letter
+            painter.drawText(int(rect_x), int(rect_y), int(tile_width), int(tile_height), Qt.AlignmentFlag.AlignCenter, text)
+
+
 class HexMemorySetupView(QWidget):
     started = Signal(object)
     back_requested = Signal()
@@ -75,6 +124,18 @@ class HexMemorySetupView(QWidget):
         intro.setObjectName("subtitle")
         intro.setWordWrap(True)
         root.addWidget(intro)
+        self.image_mode = False
+        mode_row = QHBoxLayout()
+        mode_row.addWidget(QLabel("Modalidad:"))
+        self.text_mode_button = QPushButton("Tablero generado / manual")
+        self.text_mode_button.clicked.connect(lambda: self._set_mode(False))
+        self.image_mode_button = QPushButton("Tableros con imágenes")
+        self.image_mode_button.setObjectName("secondaryButton")
+        self.image_mode_button.clicked.connect(lambda: self._set_mode(True))
+        mode_row.addWidget(self.text_mode_button)
+        mode_row.addWidget(self.image_mode_button)
+        mode_row.addStretch()
+        root.addLayout(mode_row)
 
         self.text_edit = QPlainTextEdit("(1,2,3),(1,2,3,4),(1,2,3,4,5),(1,2,3,4),(1,2,3)")
         self.text_edit.setPlaceholderText("(1,2,3),(1,2,3,4),(1,2,3,4,5),(1,2,3,4),(1,2,3)")
@@ -111,8 +172,10 @@ class HexMemorySetupView(QWidget):
                 game = HexMemoryGame.from_text(self.text_edit.toPlainText(), self.duration.value())
                 if tuple(len(row) for row in game.rows) != HexMemoryGame.DEFAULT_SHAPE:
                     raise HexBoardError("El patrón manual debe tener exactamente 3, 4, 5, 4 y 3 números por fila.")
-            else:
+            elif not self.image_mode:
                 game = HexMemoryGame.generated(self.duration.value())
+            else:
+                game = HexMemoryGame.image_round(self.duration.value(), 1)
         except HexBoardError as exc:
             QMessageBox.warning(self, "Tablero no válido", str(exc))
             return
@@ -122,6 +185,17 @@ class HexMemorySetupView(QWidget):
         manual = not self.text_edit.isVisible()
         self.text_edit.setVisible(manual)
         self.manual_button.setText("Usar generación automática" if manual else "Introducir patrón manual")
+
+    def _set_mode(self, image_mode: bool) -> None:
+        self.image_mode = image_mode
+        self.text_mode_button.setObjectName("secondaryButton" if image_mode else "")
+        self.image_mode_button.setObjectName("" if image_mode else "secondaryButton")
+        self.text_mode_button.style().unpolish(self.text_mode_button)
+        self.text_mode_button.style().polish(self.text_mode_button)
+        self.image_mode_button.style().unpolish(self.image_mode_button)
+        self.image_mode_button.style().polish(self.image_mode_button)
+        self.text_edit.setVisible(False if image_mode else self.text_edit.isVisible())
+        self.manual_button.setVisible(not image_mode)
 
 
 class HexMemoryView(QWidget):
@@ -224,17 +298,20 @@ class HexMemoryView(QWidget):
             item = self.board_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        for row_index, row in enumerate(self.game.rows):
-            row_widget = QWidget()
-            row_layout = QHBoxLayout(row_widget)
-            row_layout.setContentsMargins(0, 0, 0, 0)
-            # El ancho útil del hexágono es 82 px dentro de un widget de 92.
-            row_layout.setSpacing(-10)
-            row_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            for column_index, _value in enumerate(row):
-                cell = self.game._by_position[(row_index, column_index)]
-                row_layout.addWidget(HexCellWidget(cell, self.revealed, self.show_numbers))
-            self.board_layout.addWidget(row_widget)
+        if self.game.image_mode:
+            self.board_layout.addWidget(HexImageBoardWidget(self.game, self.revealed, self.show_numbers))
+        else:
+            for row_index, row in enumerate(self.game.rows):
+                row_widget = QWidget()
+                row_layout = QHBoxLayout(row_widget)
+                row_layout.setContentsMargins(0, 0, 0, 0)
+                # El ancho útil del hexágono es 82 px dentro de un widget de 92.
+                row_layout.setSpacing(-10)
+                row_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                for column_index, _value in enumerate(row):
+                    cell = self.game._by_position[(row_index, column_index)]
+                    row_layout.addWidget(HexCellWidget(cell, self.revealed, self.show_numbers))
+                self.board_layout.addWidget(row_widget)
         self.timer_label.setText(f"{self.remaining:02d}s" if not self.revealed else "Tiempo agotado")
         if self.revealed:
             self.target_label.setText(str(self.game.target))
@@ -294,6 +371,10 @@ class HexMemoryView(QWidget):
     def _finish_or_next(self) -> None:
         if not self.revealed:
             self._reveal()
+            return
+        if self.game.image_mode and self.game.round_number >= 10:
+            self.finish_button.setText("10 rondas completadas")
+            self.finish_button.setEnabled(False)
             return
         self.game = self.game.shuffled_round()
         self.revealed = False
