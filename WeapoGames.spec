@@ -10,7 +10,10 @@ a = Analysis(
     ["main.py"],
     pathex=["."],
     binaries=[],
-    datas=[],
+    datas=[
+        ("weapo_games/games/monstruos.json", "weapo_games/games"),
+        ("img", "img"),
+    ],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

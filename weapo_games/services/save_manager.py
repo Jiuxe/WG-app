@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from weapo_games.games.calculated_areas.game import CalculatedAreasGame
+from weapo_games.games.monstruos import MonstruosGame
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +67,33 @@ class SaveManager:
         temporary.replace(target)
         return target
 
+    @property
+    def monstruos_autosave_path(self) -> Path:
+        return self.save_directory / "monstruos_autoguardado.json"
+
+    def save_monstruos(self, game: MonstruosGame) -> Path:
+        payload = game.to_dict()
+        payload["name"] = "Monstruos - autoguardado"
+        payload["updated_at"] = datetime.now().isoformat(timespec="seconds")
+        serialized = json.dumps(payload, ensure_ascii=False, indent=2)
+        target = self.monstruos_autosave_path
+        temporary = target.with_suffix(".tmp")
+        temporary.write_text(serialized, encoding="utf-8")
+        temporary.replace(target)
+        return target
+
+    def load_monstruos(self) -> MonstruosGame:
+        target = self.monstruos_autosave_path
+        try:
+            data: Any = json.loads(target.read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise ValueError(f"No se pudo leer el autoguardado: {exc}") from exc
+        except json.JSONDecodeError as exc:
+            raise ValueError("El autoguardado de Monstruos está corrupto.") from exc
+        if data.get("game") != "Monstruos":
+            raise ValueError("El archivo no corresponde a una partida de Monstruos.")
+        return MonstruosGame.from_dict(data)
+
     def load_game(self, path: Path | str) -> CalculatedAreasGame:
         save_path = Path(path)
         try:
@@ -84,6 +112,8 @@ class SaveManager:
             key=lambda item: item.stat().st_mtime,
             reverse=True,
         ):
+            if path == self.monstruos_autosave_path:
+                continue
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 results.append(
