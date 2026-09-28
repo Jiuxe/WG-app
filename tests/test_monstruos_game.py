@@ -36,3 +36,47 @@ def test_sort_players_by_score_is_descending_and_stable_on_ties() -> None:
     game.sort_players_by_score()
 
     assert [player.name for player in game.players] == ["Luis", "Marta", "Ana"]
+
+
+def test_ice_is_released_on_the_throwers_turn_after_reordering() -> None:
+    game = MonstruosGame(
+        ["Ana", "Luis"],
+        monsters=[{"id": 1, "nombre": "Monstruo", "hpMax": 20, "recompensas": []}],
+    )
+    game.players[0].inventory.append("Hielo")
+    game.start_round()
+    game.use_item("Hielo", [0])
+    assert game.active[0].frozen_by == game.players[0].player_id
+    game.finish_turn()
+    game.use_item("Daga", [0])
+    game.finish_turn()
+
+    game.reorder_players(["Luis", "Ana"])
+    game.start_round()
+    game.begin_turn()
+    assert game.active[0].frozen_by == game.players[1].player_id
+    game.finish_turn()
+    game.begin_turn()
+    assert game.active[0].frozen_by is None
+
+
+def test_bomb_explodes_on_the_throwers_turn_after_reordering() -> None:
+    game = MonstruosGame(
+        ["Ana", "Luis"],
+        monsters=[{"id": 1, "nombre": "Monstruo", "hpMax": 20, "recompensas": []}],
+    )
+    game.players[0].inventory.append("Bomba")
+    game.start_round()
+    game.use_item("Bomba", [0])
+    game.finish_turn()
+    game.use_item("Daga", [0])
+    game.finish_turn()
+
+    game.reorder_players(["Luis", "Ana"])
+    game.start_round()
+    game.begin_turn()
+    assert game.active[0].bomb_by == game.players[1].player_id
+    game.finish_turn()
+    game.begin_turn()
+    assert game.active[0].bomb_by is None
+    assert game.active[0].hp == 8

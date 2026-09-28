@@ -59,6 +59,7 @@ class Player:
     score: int = 0
     inventory: list[str] = field(default_factory=lambda: ["Daga"])
     kills: list[tuple[int, str, int]] = field(default_factory=list)
+    player_id: int = 0
 
 
 class MonstruosGame:
@@ -68,7 +69,7 @@ class MonstruosGame:
         if not player_names or any(not name.strip() for name in player_names):
             raise ValueError("Debe haber al menos un jugador con nombre.")
         source = self.load_monsters() if monsters is None else monsters
-        self.players = [Player(name.strip(), score=5) for name in player_names]
+        self.players = [Player(name.strip(), score=5, player_id=index + 1) for index, name in enumerate(player_names)]
         self._deck = [Monster.from_dict(item) for item in source]
         self.active: list[Monster] = [self._deck.pop(0) for _ in range(min(3, len(self._deck)))]
         self.queue: list[Monster] = [self._deck.pop(0) for _ in range(min(5, len(self._deck)))]
@@ -85,7 +86,7 @@ class MonstruosGame:
     def to_dict(self) -> dict:
         return {
             "game": "Monstruos",
-            "save_version": 1,
+            "save_version": 2,
             "turn": self.turn_number,
             "current_player": self.current_player,
             "round_active": self.round_active,
@@ -94,6 +95,7 @@ class MonstruosGame:
             "queue": [monster.state_dict() for monster in self.queue],
             "players": [
                 {
+                    "id": player.player_id,
                     "name": player.name,
                     "score": player.score,
                     "inventory": list(player.inventory),
@@ -109,18 +111,38 @@ class MonstruosGame:
         if not isinstance(players_data, list) or not players_data:
             raise ValueError("El guardado de Monstruos no contiene jugadores válidos.")
         game = cls([str(player["name"]) for player in players_data], monsters=[])
-        game.players = [
-            Player(
-                name=str(player["name"]),
-                score=int(player.get("score", 0)),
-                inventory=list(player.get("inventory", ["Daga"])),
-                kills=[(int(kill[0]), str(kill[1]), int(kill[2])) for kill in player.get("kills", [])],
+        save_version = int(data.get("save_version", 1))
+        game.players = []
+        used_player_ids: set[int] = set()
+        for index, player in enumerate(players_data):
+            player_id = int(player.get("id", index + 1))
+            while player_id in used_player_ids:
+                player_id += 1
+            used_player_ids.add(player_id)
+            game.players.append(
+                Player(
+                    name=str(player["name"]),
+                    score=int(player.get("score", 0)),
+                    inventory=list(player.get("inventory", ["Daga"])),
+                    kills=[(int(kill[0]), str(kill[1]), int(kill[2])) for kill in player.get("kills", [])],
+                    player_id=player_id,
+                )
             )
-            for player in players_data
-        ]
-        game._deck = [Monster.from_state(monster) for monster in data.get("deck", [])]
-        game.active = [Monster.from_state(monster) for monster in data.get("active", [])]
-        game.queue = [Monster.from_state(monster) for monster in data.get("queue", [])]
+
+        def restore_monster(monster_data: dict) -> Monster:
+            monster = Monster.from_state(monster_data)
+            if save_version < 2:
+                # Las partidas antiguas guardaban la posición del jugador,
+                # no su identidad estable.
+                for attribute in ("frozen_by", "bomb_by"):
+                    old_index = getattr(monster, attribute)
+                    if old_index is not None and 0 <= int(old_index) < len(game.players):
+                        setattr(monster, attribute, game.players[int(old_index)].player_id)
+            return monster
+
+        game._deck = [restore_monster(monster) for monster in data.get("deck", [])]
+        game.active = [restore_monster(monster) for monster in data.get("active", [])]
+        game.queue = [restore_monster(monster) for monster in data.get("queue", [])]
         game.current_player = int(data.get("current_player", 0)) % len(game.players)
         game.turn_number = int(data.get("turn", 0))
         game.round_active = bool(data.get("round_active", False))
@@ -194,9 +216,9 @@ class MonstruosGame:
         player = self.current()
         events: list[str] = []
         for monster in self.active:
-            if monster.frozen_by == self.current_player:
+            if monster.frozen_by == player.player_id:
                 monster.frozen_by = None
-            if monster.bomb_by == self.current_player:
+            if monster.bomb_by == player.player_id:
                 kills: list[Monster] = []
                 self._damage(monster, 10, player, kills)
                 monster.bomb_by = None
@@ -221,7 +243,7 @@ class MonstruosGame:
             raise ValueError("Este objeto solo admite un objetivo.")
         if item == "Bomba":
             target = self._monster(slots[0])
-            target.bomb_by = self.current_player
+            target.bomb_by = player.player_id
         else:
             kills: list[Monster] = []
             damage = {"Daga": 2, "Granada": 6, "Hielo": 3}.get(item)
@@ -234,7 +256,7 @@ class MonstruosGame:
                 else:
                     self._damage(target, damage or 0, player, kills)
                 if item == "Hielo" and target in self.active and target.hp > 0:
-                    target.frozen_by = self.current_player
+                    target.frozen_by = player.player_id
             self._resolve_dead(kills)
         if item not in ("Daga", "Doblon"):
             player.inventory.remove(item)
