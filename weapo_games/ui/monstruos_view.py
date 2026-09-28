@@ -6,8 +6,9 @@ from pathlib import Path
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QMessageBox, QPushButton, QRadioButton, QVBoxLayout, QWidget,
+    QDialog, QDialogButtonBox, QFormLayout, QFrame, QHBoxLayout, QLabel,
+    QLineEdit, QListWidget, QListWidgetItem, QMessageBox, QPushButton,
+    QRadioButton, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from weapo_games.games.monstruos import MonstruosGame
@@ -72,6 +73,36 @@ class MonstruosSetupView(QWidget):
 
 
 MONSTER_IMAGES_DIR = Path(__file__).resolve().parents[2] / "img" / "monstruos"
+
+
+class PlayerEditDialog(QDialog):
+    def __init__(self, player, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(f"Editar jugador: {player.name}")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+
+        self.name_edit = QLineEdit(player.name)
+        self.score_edit = QSpinBox()
+        self.score_edit.setRange(-999999, 999999)
+        self.score_edit.setValue(player.score)
+        self.inventory_edit = QLineEdit(", ".join(player.inventory))
+        self.inventory_edit.setPlaceholderText("Ej.: Daga, Hielo")
+        form.addRow("Nombre:", self.name_edit)
+        form.addRow("Puntos:", self.score_edit)
+        form.addRow("Inventario:", self.inventory_edit)
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def values(self) -> tuple[str, int, list[str]]:
+        inventory = [item.strip() for item in self.inventory_edit.text().split(",") if item.strip()]
+        return self.name_edit.text(), self.score_edit.value(), inventory
 
 
 def _monster_value(monster: dict | object, key: str):
@@ -269,6 +300,13 @@ class MonstruosView(QWidget):
         order = QLabel("JUGADORES — arrastra para cambiar el orden")
         order.setObjectName("panelTitle")
         self.body.addWidget(order)
+        player_actions = QHBoxLayout()
+        sort_button = QPushButton("Ordenar por puntos ↓")
+        sort_button.setObjectName("secondaryButton")
+        sort_button.clicked.connect(self._sort_players_by_score)
+        player_actions.addWidget(sort_button)
+        player_actions.addStretch()
+        self.body.addLayout(player_actions)
         listing = QListWidget()
         listing.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         player_colors = ("#263c52", "#49334f", "#3b4b35", "#4b3b2e", "#303b55", "#4b3040")
@@ -284,6 +322,10 @@ class MonstruosView(QWidget):
             summary.addWidget(QLabel(f"<b>{player.name}</b>"))
             summary.addWidget(QLabel(f"{player.score} puntos"))
             summary.addWidget(QLabel(f"Inventario: {', '.join(player.inventory)}"))
+            edit = QPushButton("Editar")
+            edit.setObjectName("secondaryButton")
+            edit.clicked.connect(lambda checked=False, current_player=player: self._edit_player(current_player))
+            summary.addWidget(edit)
             history = QVBoxLayout()
             history.addWidget(QLabel("<b>Bajas</b>"))
             kills = ", ".join(f"({turno}, {name}, {points})" for turno, name, points in player.kills)
@@ -304,6 +346,26 @@ class MonstruosView(QWidget):
     def _sync_player_order(self, listing: QListWidget) -> None:
         self.game.reorder_players([listing.item(i).data(Qt.ItemDataRole.UserRole) for i in range(listing.count())])
         self._mark_unsaved()
+
+    def _sort_players_by_score(self) -> None:
+        self.game.sort_players_by_score()
+        self.game.publish()
+        self._mark_unsaved()
+        self.show_master()
+
+    def _edit_player(self, player) -> None:
+        dialog = PlayerEditDialog(player, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        name, score, inventory = dialog.values()
+        try:
+            self.game.update_player(player, name, score, inventory)
+        except ValueError as exc:
+            QMessageBox.warning(self, "Jugador no válido", str(exc))
+            return
+        self.game.publish()
+        self._mark_unsaved()
+        self.show_master()
 
     def _start_round(self) -> None:
         try:

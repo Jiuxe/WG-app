@@ -68,7 +68,7 @@ class MonstruosGame:
         if not player_names or any(not name.strip() for name in player_names):
             raise ValueError("Debe haber al menos un jugador con nombre.")
         source = self.load_monsters() if monsters is None else monsters
-        self.players = [Player(name.strip()) for name in player_names]
+        self.players = [Player(name.strip(), score=5) for name in player_names]
         self._deck = [Monster.from_dict(item) for item in source]
         self.active: list[Monster] = [self._deck.pop(0) for _ in range(min(3, len(self._deck)))]
         self.queue: list[Monster] = [self._deck.pop(0) for _ in range(min(5, len(self._deck)))]
@@ -135,6 +135,20 @@ class MonstruosGame:
         if set(names) != set(by_name) or len(names) != len(self.players):
             raise ValueError("Orden de jugadores no válido.")
         self.players = [by_name[name] for name in names]
+
+    def update_player(self, player: Player, name: str, score: int, inventory: list[str]) -> None:
+        clean_name = name.strip()
+        if not clean_name:
+            raise ValueError("El nombre del jugador no puede estar vacío.")
+        if any(other is not player and other.name == clean_name for other in self.players):
+            raise ValueError("Cada jugador debe tener un nombre distinto.")
+        player.name = clean_name
+        player.score = score
+        player.inventory = inventory
+
+    def sort_players_by_score(self) -> None:
+        """Ordena de mayor a menor puntuación manteniendo el orden en los empates."""
+        self.players.sort(key=lambda player: player.score, reverse=True)
 
     def start_round(self) -> None:
         if self.round_active:
