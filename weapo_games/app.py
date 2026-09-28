@@ -32,6 +32,12 @@ QLabel#gameName, QLabel#gameHeader, QLabel#panelTitle {
     font-size: 22px;
     font-weight: 800;
 }
+QLabel#monsterRoundCounter {
+    font-size: 20px;
+    font-weight: 800;
+    color: #F5C542;
+    padding-left: 8px;
+}
 QLabel#roundLabel {
     font-size: 28px;
     font-weight: 900;
@@ -69,6 +75,33 @@ QPushButton#secondaryButton {
 QPushButton#secondaryButton:hover {
     background-color: #303642;
 }
+QPushButton#inventoryItem:checked {
+    background-color: #2F9E5B;
+    border-color: #7CFFAA;
+    color: white;
+}
+QPushButton#targetMonster {
+    min-width: 190px;
+    min-height: 170px;
+    background-color: #231B25;
+    border: 3px solid #6B4054;
+    border-radius: 14px;
+    color: #F3F5F7;
+    font-weight: 800;
+}
+QPushButton#targetMonster[monsterState="frozen"] {
+    background-color: #214C78;
+    border-color: #5DA9E9;
+}
+QPushButton#targetMonster[monsterState="poisoned"] {
+    background-color: #7A2938;
+    border-color: #ED7180;
+}
+QPushButton#targetMonster[monsterState="selected"] {
+    background-color: #2F9E5B;
+    border-color: #7CFFAA;
+    color: white;
+}
 QPushButton#primaryDangerButton {
     background-color: #D1495B;
     border-color: #D1495B;
@@ -82,6 +115,16 @@ QFrame#gameCard, QFrame#sidePanel, QFrame#areaCard {
     border: 1px solid #343B47;
     border-radius: 14px;
 }
+QFrame#monsterCard {
+    background-color: #231B25;
+    border: 1px solid #6B4054;
+    border-radius: 14px;
+    min-width: 150px;
+}
+QLabel#monsterIcon { font-size: 42px; }
+QLabel#monsterName { font-size: 17px; font-weight: 800; color: #F6D7A7; }
+QLabel#monsterHp { font-size: 20px; font-weight: 900; color: #E86C75; }
+QLabel#monsterEffect { color: #B9C2D0; min-height: 18px; }
 QLabel#targetNumber {
     font-size: 64px;
     font-weight: 900;

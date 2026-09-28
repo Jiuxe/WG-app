@@ -1,0 +1,17 @@
+[
+  {"id": 1, "nombre": "Calabaza halloween", "hpMax": 3, "recompensas": ["Veneno"]},
+  {"id": 2, "nombre": "Espantapajaros terrorifico", "hpMax": 4, "recompensas": ["Espada doble"]},
+  {"id": 3, "nombre": "Esqueleto siniestro", "hpMax": 5, "recompensas": ["Hielo"]},
+  {"id": 4, "nombre": "Araña gigante", "hpMax": 6, "recompensas": ["Veneno", "Hielo"]},
+  {"id": 5, "nombre": "Calavera en llamas", "hpMax": 9, "recompensas": ["Granada"]},
+  {"id": 6, "nombre": "Arbol siniestro", "hpMax": 8, "recompensas": ["Espada doble", "Doblon"]},
+  {"id": 7, "nombre": "Sirena Maligna", "hpMax": 10, "recompensas": ["Granada", "Doblon"]},
+  {"id": 8, "nombre": "Hombre-mosca", "hpMax": 11, "recompensas": ["Espada doble"]},
+  {"id": 9, "nombre": "Diablillo", "hpMax": 12, "recompensas": ["Bomba"]},
+  {"id": 10, "nombre": "Asesino", "hpMax": 8, "recompensas": ["Espada doble", "Veneno"]},
+  {"id": 11, "nombre": "Demonio", "hpMax": 14, "recompensas": ["Bomba", "Doblon"]},
+  {"id": 12, "nombre": "Vampiro", "hpMax": 10, "recompensas": ["Hielo", "Granada"]},
+  {"id": 13, "nombre": "Perro Rabioso", "hpMax": 6, "recompensas": ["Bomba"]},
+  {"id": 14, "nombre": "Ancargel mortal", "hpMax": 15, "recompensas": ["Bomba", "Granada"]},
+  {"id": 15, "nombre": "La Muerte", "hpMax": 18, "recompensas": ["Doblon", "Doblon"]}
+]
